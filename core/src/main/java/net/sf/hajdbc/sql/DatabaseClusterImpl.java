@@ -20,10 +20,12 @@ package net.sf.hajdbc.sql;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -102,7 +104,7 @@ public class DatabaseClusterImpl<Z, D extends Database<Z>> implements DatabaseCl
 	private boolean active = false;
 	
 	private final List<DatabaseClusterConfigurationListener<Z, D>> configurationListeners = new CopyOnWriteArrayList<>();	
-	private final List<DatabaseClusterListener> clusterListeners = new CopyOnWriteArrayList<>();
+	private final Map<Object,DatabaseClusterListener> clusterListeners = Collections.synchronizedMap(new WeakHashMap<Object,DatabaseClusterListener>());
 	private final List<SynchronizationListener> synchronizationListeners = new CopyOnWriteArrayList<>();
 	
 	public DatabaseClusterImpl(String id, DatabaseClusterConfiguration<Z, D> configuration)
@@ -375,13 +377,13 @@ public class DatabaseClusterImpl<Z, D extends Database<Z>> implements DatabaseCl
 
 	/**
 	 * {@inheritDoc}
-	 * @see net.sf.hajdbc.DatabaseCluster#addListener(net.sf.hajdbc.DatabaseClusterListener)
+	 * @see net.sf.hajdbc.DatabaseCluster#addListener(Object, net.sf.hajdbc.DatabaseClusterListener)
 	 */
 	@ManagedOperation
 	@Override
-	public void addListener(DatabaseClusterListener listener)
+	public void addListener(Object proxy, DatabaseClusterListener listener)
 	{
-		this.clusterListeners.add(listener);
+		this.clusterListeners.put(proxy, listener);
 	}
 
 	/**
@@ -414,7 +416,7 @@ public class DatabaseClusterImpl<Z, D extends Database<Z>> implements DatabaseCl
 	@Override
 	public void removeListener(DatabaseClusterListener listener)
 	{
-		this.clusterListeners.remove(listener);
+		this.clusterListeners.values().remove(listener);
 	}
 
 	/**
@@ -451,7 +453,7 @@ public class DatabaseClusterImpl<Z, D extends Database<Z>> implements DatabaseCl
 
 			manager.activated(event);
 			
-			for (DatabaseClusterListener listener: this.clusterListeners)
+			for (DatabaseClusterListener listener: this.clusterListeners.values())
 			{
 				listener.activated(event);
 			}
@@ -477,7 +479,7 @@ public class DatabaseClusterImpl<Z, D extends Database<Z>> implements DatabaseCl
 
 			manager.deactivated(event);
 			
-			for (DatabaseClusterListener listener: this.clusterListeners)
+			for (DatabaseClusterListener listener: this.clusterListeners.values())
 			{
 				listener.deactivated(event);
 			}

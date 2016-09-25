@@ -35,8 +35,6 @@ public abstract class AbstractRootProxyFactory<Z, D extends Database<Z>> extends
 	protected AbstractRootProxyFactory(DatabaseCluster<Z, D> cluster)
 	{
 		super(cluster, createInitialMap(cluster), SQLException.class);
-		
-		cluster.addListener(this);
 	}
 
 	private static <Z, D extends Database<Z>> Map<D, Z> createInitialMap(DatabaseCluster<Z, D> cluster)
