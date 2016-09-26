@@ -101,11 +101,16 @@ public class SynchronousExecutorTest
 			try
 			{
 				Thread.sleep(this.sleep);
+				System.out.println("slept: " + this.index);
 			}
 			catch (InterruptedException e)
 			{
+				System.out.println("interrupt: " + this.index);
 				Thread.currentThread().interrupt();
 			}
+                        catch (Exception e) {
+                            e.printStackTrace(System.err);                            
+                        }
 			this.order.add(this.index);
 			return this.index;
 		}
