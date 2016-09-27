@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,6 +38,8 @@ import org.junit.Test;
  */
 public class SynchronousExecutorTest
 {
+        private ConcurrentLinkedQueue<Object> logger = new ConcurrentLinkedQueue<>();
+
 	@Test
 	public void test() throws InterruptedException, ExecutionException
 	{
@@ -51,7 +54,9 @@ public class SynchronousExecutorTest
 
 	public void test(List<Integer> sleeps, boolean reverse) throws InterruptedException, ExecutionException
 	{
+
 		ExecutorService service = Executors.newCachedThreadPool();
+                SynchronousExecutor syncX = new SynchronousExecutor(service, reverse);
 		try
 		{
 			List<Task> tasks = new ArrayList<>(sleeps.size());
@@ -62,8 +67,10 @@ public class SynchronousExecutorTest
 				tasks.add(new Task(i, sleeps.get(i), order));
 				expected.add(i);
 			}
-			
-			List<Future<Integer>> futures = new SynchronousExecutor(service, reverse).invokeAll(tasks);
+
+                        logger.add("expected: "); logger.add(expected);
+
+			List<Future<Integer>> futures = syncX.invokeAll(tasks);
 			
 			List<Integer> results = new ArrayList<>(tasks.size());
 			for (Future<Integer> future: futures)
@@ -78,6 +85,11 @@ public class SynchronousExecutorTest
 		}
 		finally
 		{
+                    for (Object logged : logger) {
+                        System.out.println(logged.toString());
+                    }
+                    System.out.println(syncX.toString());
+
 			service.shutdown();
 		}
 	}
@@ -95,17 +107,23 @@ public class SynchronousExecutorTest
 			this.order = order;
 		}
 
+                public String toString() {
+                    return new StringBuilder("#").append(this.index).append(" for ").append(this.sleep).append("\n").toString();
+                }
+
 		@Override
 		public Integer call() throws Exception
 		{
 			try
 			{
 				Thread.sleep(this.sleep);
-				System.out.println("slept: " + this.index);
+
+				logger.add("slept: "); logger.add(this.index); logger.add("\n");
 			}
 			catch (InterruptedException e)
 			{
-				System.out.println("interrupt: " + this.index);
+                            logger.add("interrupt: "); logger.add(this.index); logger.add("\n");
+
 				Thread.currentThread().interrupt();
 			}
                         catch (Exception e) {

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
@@ -30,6 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -45,6 +47,9 @@ public class SynchronousExecutor extends AbstractExecutorService
 {
 	private final ExecutorService executor;
 	private final boolean reverse;
+
+    private ConcurrentLinkedQueue<Object> logger = new ConcurrentLinkedQueue<>();
+
 	
 	public SynchronousExecutor(ExecutorService executor)
 	{
@@ -164,8 +169,10 @@ public class SynchronousExecutor extends AbstractExecutorService
 		long end = (timeout == Long.MAX_VALUE) ? 0 : System.currentTimeMillis() + unit.toMillis(timeout);
 		boolean synchronous = !this.reverse;
 		int remaining = tasks.size();
+
 		LinkedList<Future<T>> futures = new LinkedList<>();
-		
+		LinkedList<Callable> index = new LinkedList<>(); 
+
 		for (Callable<T> task: this.reverse ? new Reversed<>(new ArrayList<>(tasks)) : tasks)
 		{
 			remaining -= 1;
@@ -173,14 +180,20 @@ public class SynchronousExecutor extends AbstractExecutorService
 			if (synchronous)
 			{
 				Future<T> future = this.reverse ? new LazyFuture<>(task) : new EagerFuture<>(task);
+                                
+                                logger.add("lazy "); logger.add(this.reverse); logger.add("->"); logger.add(task);
 				
 				if (this.reverse)
 				{
-					futures.addFirst(future);
+                                    futures.addFirst(future);
+                                    
+                                    index.addFirst(task);
 				}
 				else
 				{
-					futures.addLast(future);
+                                    futures.addLast(future);
+
+                                    index.addLast(task);
 				}
 				
 				// Execute remaining tasks in parallel, if there are multiple
@@ -194,11 +207,15 @@ public class SynchronousExecutor extends AbstractExecutorService
 				Future<T> future = this.executor.submit(task);
 				if (this.reverse)
 				{
-					futures.addFirst(future);
+                                    futures.addFirst(future);
+
+                                    index.addFirst(task);
 				}
 				else
 				{
-					futures.addLast(future);
+                                    futures.addLast(future);
+
+                                    index.addLast(task);
 				}
 				
 				if (this.reverse && (remaining == 1))
@@ -210,6 +227,9 @@ public class SynchronousExecutor extends AbstractExecutorService
 		
 		try
 		{
+                    logger.add(" futures: "); logger.add(futures);
+                    logger.add(" index: "); logger.add(index);
+
 			// Wait until all tasks have finished
 			for (Future<T> future: this.reverse ? new Reversed<>(futures) : futures)
 			{
@@ -229,7 +249,8 @@ public class SynchronousExecutor extends AbstractExecutorService
 								future.get(end - now, TimeUnit.MILLISECONDS);
 							}
 						}
-                                                System.out.println("Got: " + future.isDone());
+                                                
+                                                logger.add(" Got: "); logger.add(future.isDone());
 					}
 					catch (ExecutionException e)
 					{
@@ -253,6 +274,8 @@ public class SynchronousExecutor extends AbstractExecutorService
 			{
 				if (!future.isDone())
 				{
+                                    logger.add(" cancel: "); logger.add(future);
+
 					future.cancel(true);
 				}
 			}
@@ -287,6 +310,10 @@ public class SynchronousExecutor extends AbstractExecutorService
 		
 		return futures.get(this.reverse ? (futures.size() - 1) : 0).get();
 	}
+
+    public String toString() {
+        return logger.toString();
+    }
 	
 	/**
 	 * Future that doesn't execute its task until get(...).
