@@ -106,7 +106,7 @@ public class SynchronousExecutorTest
 			catch (InterruptedException e)
 			{
 				System.out.println("interrupt: " + this.index);
-				Thread.currentThread().interrupt();
+                                e.printStackTrace(System.err);                        				Thread.currentThread().interrupt();
 			}
                         catch (Exception e) {
                             e.printStackTrace(System.err);                            
