@@ -177,7 +177,7 @@ public class SynchronousExecutor extends AbstractExecutorService
 			{
 				Future<T> future = this.reverse ? new LazyFuture<>(task) : new EagerFuture<>(task);
                                 
-                                logger.append("Eager: ").append(task.toString());
+                                System.out.println(future);
 				
 				if (this.reverse)
 				{
@@ -215,8 +215,6 @@ public class SynchronousExecutor extends AbstractExecutorService
 		
 		try
 		{
-                    logger.append("futures: ").append(futures.toString());
-
 			// Wait until all tasks have finished
 			for (Future<T> future: this.reverse ? new Reversed<>(futures) : futures)
 			{
@@ -295,10 +293,6 @@ public class SynchronousExecutor extends AbstractExecutorService
 		return futures.get(this.reverse ? (futures.size() - 1) : 0).get();
 	}
 
-    public String toString() {
-        return logger.toString();
-    }
-	
 	/**
 	 * Future that doesn't execute its task until get(...).
 	 */
