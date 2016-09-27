@@ -46,9 +46,6 @@ public class SynchronousExecutor extends AbstractExecutorService
 	private final ExecutorService executor;
 	private final boolean reverse;
 
-    private StringBuilder() = new StringBuilder();
-
-	
 	public SynchronousExecutor(ExecutorService executor)
 	{
 		this(executor, false);
@@ -215,6 +212,8 @@ public class SynchronousExecutor extends AbstractExecutorService
 		
 		try
 		{
+                    System.out.println(futures);
+
 			// Wait until all tasks have finished
 			for (Future<T> future: this.reverse ? new Reversed<>(futures) : futures)
 			{
